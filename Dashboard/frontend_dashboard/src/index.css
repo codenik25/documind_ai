@@ -1,0 +1,393 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg-color: #030303;
+  --panel-bg: rgba(10, 10, 12, 0.4);
+  --panel-border: rgba(200, 255, 69, 0.15);
+  --neon-lime: #C8FF45;
+  --neon-lime-dim: rgba(200, 255, 69, 0.2);
+  --text-main: #FFFFFF;
+  --text-muted: #888888;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+/* Cinematic Background & Grid Layering */
+.dashboard-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex; /* We will use absolute/flex for floating layout */
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(200, 255, 69, 0.03), transparent 70%),
+    linear-gradient(rgba(200, 255, 69, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 255, 69, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 60px 60px, 60px 60px;
+  background-position: center, center, center;
+}
+
+.dashboard-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 150px rgba(0,0,0,0.95);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Floating Glass Panels */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.mono-text {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.neon-text {
+  color: var(--neon-lime);
+  text-shadow: 0 0 10px rgba(200, 255, 69, 0.4);
+}
+
+/* ────────────────────────────────────────
+   Layout Areas (Floating)
+   ──────────────────────────────────────── */
+
+.sidebar {
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 24px;
+  width: 280px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  z-index: 20;
+}
+
+.topbar {
+  position: absolute;
+  top: 24px;
+  left: 328px;
+  right: 364px;
+  height: 60px;
+  padding: 0 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 20;
+}
+
+.main-canvas {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 364px 120px 328px; /* Padding to avoid overlap with floating sidebars */
+  overflow: hidden;
+}
+
+/* Background Neural Motion for Canvas */
+.canvas-bg-motion {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 50%, rgba(200,255,69,0.05) 0%, transparent 70%);
+  animation: neural-pulse 6s ease-in-out infinite alternate, holographic-drift 20s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes neural-pulse {
+  0% { transform: scale(1); opacity: 0.3; filter: blur(4px); }
+  100% { transform: scale(1.05); opacity: 0.8; filter: blur(0px); }
+}
+
+@keyframes holographic-drift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.semantic-pulse {
+  animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px rgba(200,255,69,0.2); }
+  100% { box-shadow: 0 0 20px rgba(200,255,69,0.6); }
+}
+
+.right-panel {
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  right: 24px;
+  width: 320px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  z-index: 20;
+  overflow-y: hidden;
+  background: linear-gradient(180deg, rgba(10,10,12,0.6) 0%, rgba(5,5,5,0.8) 100%);
+}
+
+/* Sidebar Elements */
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--neon-lime);
+  border-radius: 4px;
+  box-shadow: 0 0 15px var(--neon-lime-dim);
+}
+
+.nav-menu {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nav-item {
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+.nav-item:hover {
+  color: var(--text-main);
+  background: rgba(255,255,255,0.05);
+}
+.nav-item.active {
+  color: var(--neon-lime);
+  background: var(--neon-lime-dim);
+  border-left: 3px solid var(--neon-lime);
+}
+
+.upload-area {
+  margin-top: auto;
+  padding: 24px;
+  border: 1px dashed var(--panel-border);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.upload-area:hover {
+  border-color: var(--neon-lime);
+  background: rgba(200, 255, 69, 0.05);
+}
+
+/* Topbar Elements */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  background: var(--neon-lime);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--neon-lime);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 1; box-shadow: 0 0 10px var(--neon-lime); }
+  50% { opacity: 0.5; box-shadow: 0 0 2px var(--neon-lime); }
+  100% { opacity: 1; box-shadow: 0 0 10px var(--neon-lime); }
+}
+
+.topbar-stats {
+  display: flex;
+  gap: 24px;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ────────────────────────────────────────
+   Input Overlay Pill
+   ──────────────────────────────────────── */
+.input-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  z-index: 30;
+  display: flex;
+  gap: 12px;
+  background: rgba(5,5,5,0.8);
+  backdrop-filter: blur(24px);
+  padding: 8px 8px 8px 24px;
+  border-radius: 30px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.input-overlay:focus-within {
+  border-color: var(--neon-lime);
+  box-shadow: 0 0 20px rgba(200,255,69,0.1), 0 10px 40px rgba(0,0,0,0.8);
+}
+
+.input-box {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  outline: none;
+}
+.input-box::placeholder {
+  color: var(--text-muted);
+}
+.send-btn {
+  background: var(--neon-lime);
+  color: black;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+.send-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px var(--neon-lime-dim);
+}
+.send-btn:disabled {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.3);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ────────────────────────────────────────
+   Right Panel Telemetry
+   ──────────────────────────────────────── */
+.telemetry-feed {
+  flex: 1;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+}
+
+.telemetry-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+  border-left: 2px solid rgba(200,255,69,0.5);
+  border-radius: 0 6px 6px 0;
+  animation: slideInRight 0.5s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.collapsed-event-card {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.collapsed-event-card:hover {
+  background: rgba(200, 255, 69, 0.05);
+  border-color: rgba(200, 255, 69, 0.2);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 15px rgba(200, 255, 69, 0.1);
+}
+
