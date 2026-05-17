@@ -2,7 +2,9 @@
 
 > A cinematic Neural Intelligence Operating System for document understanding, retrieval, and AI-powered decision synthesis.
 
-![DocuMind AI Banner](./preview/banner.png)
+![DocuMind AI Banner]
+<img width="1983" height="793" alt="image" src="https://github.com/user-attachments/assets/243f7219-7137-4c10-b16c-f753a0683ecf" />
+
 
 ## Overview
 
