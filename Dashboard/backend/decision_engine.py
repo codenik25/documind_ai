@@ -19,11 +19,13 @@ class DecisionEngine:
         Initializes the Gemini Client.
         """
         api_key = os.getenv("GEMINI_API_KEY")
+
         if not api_key:
-            logger.error("GEMINI_API_KEY environment variable is not set.")
-        
-        # Initialize the GenAI client. It will automatically use GEMINI_API_KEY from environment if available.
-        self.client = genai.Client()
+            raise ValueError("GEMINI_API_KEY environment variable is not set.")
+
+            self.client = genai.Client(
+                 api_key=api_key
+                            )
         logger.info(f"DecisionEngine initialized for DocuMind Intelligence using Gemini API")
 
     def get_active_model(self) -> str:
