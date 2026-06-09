@@ -10,34 +10,38 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-venv/
-.env
-.venv
-env.bak/
-venv.bak/
 
-# Environment Variables
+env/
+venv/
+.venv/
+
+# Environment
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+
+# ChromaDB
+chroma_db/
+vector_db/
+db/
+chroma/
+
+# Uploaded Files
+uploads/
+temp/
+tmp/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
 
 # OS
 .DS_Store
 Thumbs.db
+venv/
+venv2/
+.venv/

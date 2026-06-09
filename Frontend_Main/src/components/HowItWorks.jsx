@@ -108,7 +108,7 @@ export default function NeuralPipeline() {
     { id: 2, title: 'Semantic Chunking', icon: Scissors, state: 'WAITING', color: '#fbbf24', telemetry: { 'Chunks': '156', 'Overlap': '150', 'Density': 'HIGH' }, label: 'TEXT CHUNKS' },
     { id: 3, title: 'Vector Embeddings', icon: Fingerprint, state: 'WAITING', color: '#fbbf24', telemetry: { 'Model': 'MiniLM-L6', 'Vectors': '156', 'Latency': '42ms' }, label: 'VECTOR EMBEDDINGS' },
     { id: 4, title: 'Context Retrieval', icon: Search, state: 'WAITING', color: 'var(--accent-green)', telemetry: { 'Score': '0.92', 'Rank': 'Top-K', 'Match': 'Semantic' }, label: 'RELEVANT CONTEXT' },
-    { id: 5, title: 'LM Studio Core', isCenterpiece: true, color: 'var(--accent-green)', label: 'AI REASONING' },
+    { id: 5, title: 'Gemini Intelligence Core', isCenterpiece: true, color: 'var(--accent-green)', label: 'AI REASONING' },
     { id: 6, title: 'Decision Synthesis', icon: CheckCircle, state: 'WAITING', color: 'var(--accent-green)', telemetry: { 'Confidence': 'CALC...', 'Risk': 'Pending', 'Rec': 'Pending' }, label: 'FINAL RESPONSE' }
   ];
 

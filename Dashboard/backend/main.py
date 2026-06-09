@@ -11,6 +11,9 @@ import shutil
 import time
 import json
 import uuid
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(
     title="DocuMind AI API",
@@ -96,7 +99,7 @@ def process_document_task(file_path: str, filename: str, document_id: str):
         
         context = "\n\n".join(chunks)
         
-        logger.info("[LM_STUDIO_REQUEST_SENT]")
+        logger.info("[GEMINI_REQUEST_SENT]")
         analysis_summary = decision_engine.generate_initial_scan(prompt, context, mode="general")
         logger.info("[INFERENCE_COMPLETE]")
         
@@ -184,7 +187,7 @@ async def ask_question(request: QueryRequest):
         
         def stream_generator():
             full_answer = ""
-            for token in decision_engine.stream_lmstudio_response(request.question, context):
+            for token in decision_engine.stream_response(request.question, context):
                 full_answer += token
                 yield token
             

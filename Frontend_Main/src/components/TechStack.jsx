@@ -47,7 +47,7 @@ export default function TechStack() {
   const stack = [
     { type: 'BACKEND', name: 'FastAPI', desc: 'High-performance Python backend', icon: Zap, color: '#3b82f6' },
     { type: 'AI', name: 'LangChain', desc: 'LLM orchestration framework', icon: BrainCircuit, color: '#10b981' },
-    { type: 'AI', name: 'LM Studio', desc: 'Local AI inference engine', icon: Box, color: '#8b5cf6' },
+    { type: 'AI', name: 'Google Gemini', desc: 'Cloud AI inference engine', icon: Box, color: '#8b5cf6' },
     { type: 'FRAMEWORK', name: 'React', desc: 'Modern frontend framework', icon: Code, color: '#0ea5e9' },
     { type: 'UI', name: 'GSAP', desc: 'Performance-grade animations', icon: MonitorPlay, color: '#84cc16' },
     { type: 'DATABASE', name: 'ChromaDB', desc: 'Vector database for embeddings', icon: Layers, color: '#ec4899' }

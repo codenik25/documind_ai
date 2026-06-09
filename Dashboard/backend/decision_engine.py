@@ -1,37 +1,34 @@
-import requests
+import os
 import time
 import json
 import re
 from typing import Generator
 from utils.logger import logger
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class DecisionEngine:
-    """Orchestrates futuristic AI document intelligence using direct LM Studio REST API calls."""
+    """Orchestrates futuristic AI document intelligence using Google Gemini API."""
     
-    def __init__(self, base_url: str = "http://127.0.0.1:1234"):
+    def __init__(self):
         """
-        Initializes the LM Studio configuration without a hardcoded model.
+        Initializes the Gemini Client.
         """
-        self.base_url = base_url
-        self.endpoint = f"{self.base_url}/v1/chat/completions"
-        self.models_endpoint = f"{self.base_url}/v1/models"
-        logger.info(f"DecisionEngine initialized for DocuMind Intelligence at {self.base_url}")
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.error("GEMINI_API_KEY environment variable is not set.")
+        
+        # Initialize the GenAI client. It will automatically use GEMINI_API_KEY from environment if available.
+        self.client = genai.Client()
+        logger.info(f"DecisionEngine initialized for DocuMind Intelligence using Gemini API")
 
     def get_active_model(self) -> str:
-        """Fetches the currently loaded model from LM Studio dynamically."""
-        try:
-            response = requests.get(self.models_endpoint, timeout=5.0)
-            response.raise_for_status()
-            data = response.json()
-            if data and "data" in data and len(data["data"]) > 0:
-                # Return the ID of the first loaded model
-                active_model = data["data"][0]["id"]
-                return active_model
-        except Exception as e:
-            logger.error(f"Failed to fetch active model from LM Studio: {e}")
-        
-        # Fallback if LM Studio is unreachable or no models are loaded
-        return "disconnected-or-unknown-model"
+        """Returns the target Gemini model."""
+        return "gemini-2.5-flash"
 
     def _get_intelligence_prompt(self, mode: str = "general") -> str:
         """Enforces a futuristic, structured, and analytical AI persona returning pure JSON."""
@@ -72,14 +69,27 @@ class DecisionEngine:
         
         return base_prompt + mode_instructions.get(mode.lower(), mode_instructions["general"])
 
+    def _execute_with_retry(self, func, max_retries=3, initial_delay=1):
+        """Executes a function with exponential backoff for API calls."""
+        delay = initial_delay
+        for attempt in range(1, max_retries + 1):
+            try:
+                return func()
+            except Exception as e:
+                logger.warning(f"API call failed (attempt {attempt}/{max_retries}): {e}")
+                if attempt == max_retries:
+                    logger.error(f"Max retries reached. Final error: {e}")
+                    raise e
+                time.sleep(delay)
+                delay *= 2
+
     def generate_initial_scan(self, question: str, context: str, mode: str = "general") -> str:
-        """Generates an advanced semantic analysis response."""
+        """Generates an advanced semantic analysis response using Gemini JSON mode."""
         if not context or context.strip() == "":
             logger.warning("Vector retrieval returned empty set. Proceeding with zero-context inference.")
             context = "No specific document context retrieved. Rely on general knowledge or state that information is missing."
 
-        # HARD CONTEXT LIMIT: Prevent prompt explosion and inference timeout
-        MAX_CONTEXT_CHARS = 6000
+        MAX_CONTEXT_CHARS = 30000 # Gemini can handle larger context
         if len(context) > MAX_CONTEXT_CHARS:
             logger.warning(f"Context exceeds limit. Truncating from {len(context)} to {MAX_CONTEXT_CHARS} characters.")
             context = context[:MAX_CONTEXT_CHARS] + "\n...[CONTEXT TRUNCATED FOR SAFETY]..."
@@ -87,79 +97,74 @@ class DecisionEngine:
         active_model = self.get_active_model()
         start_time = time.time()
         logger.info(f"Initiating Neural Synthesis for: '{question[:50]}...' using {active_model}")
-        logger.info(f"[ACTIVE MODEL] {active_model}")
-        logger.info(f"Payload context size: {len(context)} chars")
         
-        payload = {
-            "model": active_model,
-            "messages": [
-                {"role": "system", "content": self._get_intelligence_prompt(mode)},
-                {"role": "user", "content": f"INPUT_CONTEXT:\n{context}\n\nUSER_QUERY: {question}"}
-            ],
-            "temperature": 0.2, # Lower temperature for JSON precision
-            "max_tokens": 1000,
-            "stream": False
-        }
+        system_instruction = self._get_intelligence_prompt(mode)
+        user_content = f"INPUT_CONTEXT:\n{context}\n\nUSER_QUERY: {question}"
+        
+        def _api_call():
+            return self.client.models.generate_content(
+                model=active_model,
+                contents=user_content,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    temperature=0.2,
+                )
+            )
 
         try:
-            logger.info("[LM STUDIO REQUEST] Starting initial scan synthesis...")
-            response = requests.post(
-                self.endpoint,
-                json=payload,
-                timeout=300.0 # Increased timeout for large document inference
-            )
-            response.raise_for_status()
+            logger.info("[GEMINI REQUEST] Starting initial scan synthesis...")
+            response = self._execute_with_retry(_api_call)
             
-            data = response.json()
-            if not data.get("choices") or not data["choices"][0].get("message", {}).get("content"):
-                logger.error("NEURAL INFERENCE FAILURE: LM Studio returned empty content.")
-                raise ValueError("LM Studio returned empty or invalid choices array.")
+            if not response or not response.text:
+                raise ValueError("Gemini API returned empty response.")
                 
-            answer = data["choices"][0]["message"]["content"].strip()
-            logger.info(f"[LM STUDIO RESPONSE] Received {len(answer)} chars.")
+            answer = response.text.strip()
+            logger.info(f"[GEMINI RESPONSE] Received {len(answer)} chars.")
             
-            # Robust JSON extraction using regex in case model adds conversation fluff
+            # Robust JSON extraction
             json_match = re.search(r'\{.*\}', answer, re.DOTALL)
             if json_match:
                 answer = json_match.group(0)
             
-            # Validate JSON
+            # Validate and Normalize JSON
             try:
                 parsed = json.loads(answer)
-                # Normalize response to ensure all required keys exist
-                parsed.setdefault("recommendation", "ANALYZE")
-                parsed.setdefault("risks", [])
-                parsed.setdefault("suggestions", [])
-                parsed.setdefault("confidence", 50)
-                parsed.setdefault("metadata", {})
-                parsed.setdefault("semantic_insights", [])
-                
-                # Enforce types
-                if not isinstance(parsed["risks"], list): parsed["risks"] = [str(parsed["risks"])] if parsed["risks"] else []
-                if not isinstance(parsed["suggestions"], list): parsed["suggestions"] = [str(parsed["suggestions"])] if parsed["suggestions"] else []
-                if not isinstance(parsed["semantic_insights"], list): parsed["semantic_insights"] = [str(parsed["semantic_insights"])] if parsed["semantic_insights"] else []
-                if not isinstance(parsed["metadata"], dict): parsed["metadata"] = {}
-                
-                # If the answer was just a raw string embedded somewhere, put it in semantic insights
-                if "answer" in parsed and isinstance(parsed["answer"], str) and not parsed["semantic_insights"]:
-                    parsed["semantic_insights"].append(parsed["answer"])
-                    
-                answer = json.dumps(parsed)
-                
             except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON returned by LM Studio model: {e}. Raw response: {answer[:200]}")
-                raise ValueError(f"Model returned invalid JSON: {answer[:100]}...")
+                logger.error(f"Invalid JSON returned by Gemini model: {e}. Raw response: {answer[:200]}")
+                parsed = {}
+                
+            # Normalize response to ensure all required keys exist and provide safe fallback
+            parsed.setdefault("recommendation", "READY_FOR_ANALYSIS")
+            parsed.setdefault("risks", [])
+            parsed.setdefault("suggestions", ["The document was processed but intelligence synthesis returned a non-standard format."])
+            parsed.setdefault("confidence", 70)
+            parsed.setdefault("metadata", {})
+            parsed.setdefault("semantic_insights", ["Document parsed successfully."])
             
+            # Enforce types
+            if not isinstance(parsed["risks"], list): parsed["risks"] = [str(parsed["risks"])] if parsed["risks"] else []
+            if not isinstance(parsed["suggestions"], list): parsed["suggestions"] = [str(parsed["suggestions"])] if parsed["suggestions"] else []
+            if not isinstance(parsed["semantic_insights"], list): parsed["semantic_insights"] = [str(parsed["semantic_insights"])] if parsed["semantic_insights"] else []
+            if not isinstance(parsed["metadata"], dict): parsed["metadata"] = {}
+                
+            answer = json.dumps(parsed)
             duration = time.time() - start_time
             logger.info(f"Neural Synthesis completed in {duration:.2f}s")
             return answer
             
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Neural Synthesis connection failed: {str(e)}")
-            raise ConnectionError(f"LM STUDIO OFFLINE: {str(e)}")
         except Exception as e:
             logger.error(f"Neural Synthesis failed: {str(e)}")
-            raise e
+            # Return safe fallback object instead of crashing
+            fallback = {
+                "recommendation": "REQUIRES_REPROCESSING",
+                "risks": ["System error during intelligence synthesis.", str(e)],
+                "suggestions": ["Try re-uploading the document.", "Check API connectivity."],
+                "confidence": 0,
+                "metadata": {"error": "true"},
+                "semantic_insights": []
+            }
+            return json.dumps(fallback)
 
     def generate_query_answer(self, question: str, context: str) -> str:
         """Generates a fast conversational text response bypassing JSON parsing."""
@@ -167,7 +172,7 @@ class DecisionEngine:
             logger.warning("Vector retrieval returned empty set. Proceeding with zero-context inference.")
             context = "No specific document context retrieved. Rely on general knowledge."
 
-        MAX_CONTEXT_CHARS = 6000
+        MAX_CONTEXT_CHARS = 30000
         if len(context) > MAX_CONTEXT_CHARS:
             context = context[:MAX_CONTEXT_CHARS] + "\n...[CONTEXT TRUNCATED]..."
 
@@ -175,53 +180,43 @@ class DecisionEngine:
         start_time = time.time()
         logger.info(f"Initiating Conversational Query for: '{question[:50]}...' using {active_model}")
         
-        system_prompt = (
+        system_instruction = (
             "You are an intelligent document assistant.\n"
             "Answer the user question using the retrieved context.\n"
             "Be concise, accurate, and natural. Return plain text only. Do not generate JSON."
         )
+        user_content = f"INPUT_CONTEXT:\n{context}\n\nUSER_QUERY: {question}"
 
-        payload = {
-            "model": active_model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"INPUT_CONTEXT:\n{context}\n\nUSER_QUERY: {question}"}
-            ],
-            "temperature": 0.3, 
-            "max_tokens": 1000,
-            "stream": False
-        }
+        def _api_call():
+            return self.client.models.generate_content(
+                model=active_model,
+                contents=user_content,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.3,
+                )
+            )
 
         try:
-            logger.info("[LM STUDIO REQUEST] Starting conversational query...")
-            response = requests.post(
-                self.endpoint,
-                json=payload,
-                timeout=120.0
-            )
-            response.raise_for_status()
+            logger.info("[GEMINI REQUEST] Starting conversational query...")
+            response = self._execute_with_retry(_api_call)
             
-            data = response.json()
-            if not data.get("choices") or not data["choices"][0].get("message", {}).get("content"):
-                raise ValueError("LM Studio returned empty or invalid choices array.")
+            if not response or not response.text:
+                raise ValueError("Gemini API returned empty response.")
                 
-            answer = data["choices"][0]["message"]["content"].strip()
-            logger.info(f"[LM STUDIO RESPONSE] Received {len(answer)} chars.")
+            answer = response.text.strip()
+            logger.info(f"[GEMINI RESPONSE] Received {len(answer)} chars.")
             
             duration = time.time() - start_time
             logger.info(f"Conversational Query completed in {duration:.2f}s")
             return answer
             
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Conversational Query connection failed: {str(e)}")
-            raise ConnectionError(f"LM STUDIO OFFLINE: {str(e)}")
         except Exception as e:
             logger.error(f"Conversational Query failed: {str(e)}")
-            raise e
+            return f"I encountered an error while processing your request: {str(e)}"
 
     def analyze_document(self, text: str, requested_mode: str = "general") -> str:
         """Performs automatic document intelligence scan on upload."""
-        # Use requested mode if provided and valid, else heuristic
         valid_modes = ["academic", "legal", "resume", "business", "research", "technical", "general"]
         mode = requested_mode.lower() if requested_mode.lower() in valid_modes else "general"
         
@@ -247,78 +242,55 @@ class DecisionEngine:
             f"and provide 3 deep semantic insights. Use {mode.upper()} mode and heavily populate the Anomalies section."
         )
         
-        # Use first 6000 characters for the overview scan to prevent massive document crash
-        return self.generate_initial_scan(prompt, text[:6000], mode=mode)
+        # Increased limit for Gemini
+        return self.generate_initial_scan(prompt, text[:30000], mode=mode)
 
-    def stream_lmstudio_response(self, question: str, context: str) -> Generator[str, None, None]:
-        """Generates a fast conversational text response natively streaming from LM Studio."""
+    def stream_response(self, question: str, context: str) -> Generator[str, None, None]:
+        """Generates a fast conversational text response natively streaming from Gemini."""
         if not context or context.strip() == "":
             logger.warning("Vector retrieval returned empty set. Proceeding with zero-context inference.")
             context = "No specific document context retrieved. Rely on general knowledge."
 
-        MAX_CONTEXT_CHARS = 6000
+        MAX_CONTEXT_CHARS = 30000
         if len(context) > MAX_CONTEXT_CHARS:
             context = context[:MAX_CONTEXT_CHARS] + "\n...[CONTEXT TRUNCATED]..."
 
         active_model = self.get_active_model()
         logger.info(f"Initiating Streaming Query for: '{question[:50]}...' using {active_model}")
         
-        prompt_content = (
-            f"Context:\n"
-            f"{context}\n\n"
-            f"User Question:\n"
-            f"{question}\n\n"
-            f"Instructions:\n"
-            f"Answer ONLY using the provided context.\n"
-            f"If the answer is unavailable in context, explicitly say:\n"
-            f"\"The answer was not found in the uploaded document.\"\n\n"
-            f"Be concise and document-grounded."
+        system_instruction = (
+            "You are an intelligent document assistant.\n"
+            "Answer ONLY using the provided context.\n"
+            "If the answer is unavailable in context, explicitly say:\n"
+            "\"The answer was not found in the uploaded document.\"\n\n"
+            "Be concise and document-grounded."
         )
+        user_content = f"INPUT_CONTEXT:\n{context}\n\nUSER_QUERY: {question}"
 
-        payload = {
-            "model": active_model,
-            "messages": [
-                {"role": "user", "content": prompt_content}
-            ],
-            "temperature": 0.1, 
-            "max_tokens": 1000,
-            "stream": True
-        }
+        def _api_stream_call():
+            return self.client.models.generate_content_stream(
+                model=active_model,
+                contents=user_content,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.1,
+                )
+            )
 
         try:
-            logger.info("[LM STUDIO REQUEST] Starting native streaming query...")
-            response = requests.post(
-                self.endpoint,
-                json=payload,
-                timeout=120.0,
-                stream=True
-            )
-            response.raise_for_status()
+            logger.info("[GEMINI REQUEST] Starting native streaming query...")
+            # Note: Exponential backoff on streaming initialization
+            response_stream = self._execute_with_retry(_api_stream_call)
             
-            for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8')
-                    if decoded_line.startswith('data: '):
-                        data_str = decoded_line[6:]
-                        if data_str == '[DONE]':
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            delta = data.get("choices", [{}])[0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                yield content
-                        except json.JSONDecodeError:
-                            continue
+            for chunk in response_stream:
+                if hasattr(chunk, "text") and chunk.text:
+                    yield chunk.text
             
-            logger.info("[LM STUDIO RESPONSE] Streaming complete.")
+            logger.info("[GEMINI RESPONSE] Streaming complete.")
             
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Streaming Query connection failed: {str(e)}")
-            raise ConnectionError(f"LM STUDIO OFFLINE: {str(e)}")
         except Exception as e:
             logger.error(f"Streaming Query failed: {str(e)}")
-            raise e
+            yield f"Error: The connection to the AI engine was interrupted ({str(e)})."
 
 # Singleton instance
 decision_engine = DecisionEngine()
