@@ -5,7 +5,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
 // Using the global VITE_API_BASE
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000';
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function Dashboard() {
   const [status, setStatus] = useState('checking'); // checking, online, offline
@@ -15,6 +15,7 @@ export default function Dashboard() {
     let isMounted = true;
     const checkBackend = async () => {
       try {
+        console.log("API_BASE =", API_BASE);  
         const res = await fetch(`${API_BASE}/system-status`, { cache: 'no-store' });
         if (!res.ok) throw new Error('API Unavailable');
         const data = await res.json();
@@ -79,7 +80,7 @@ export default function Dashboard() {
               </div>
               <ul className="mono-text" style={{ color: '#ffaaaa', fontSize: '0.9rem', lineHeight: '1.8', listStyle: 'none', padding: 0 }}>
                 <li>[!] BACKEND CONNECTION: {errorDetails.includes('CONNECTION FAILED') ? 'FAILED' : 'OK'}</li>
-                <li>[!] LM STUDIO: {errorDetails.includes('NO ACTIVE MODEL') ? 'UNREACHABLE' : errorDetails}</li>
+                <li>[!] GEMINI ENGINE: {errorDetails.includes('NO ACTIVE MODEL') ? 'UNREACHABLE' : errorDetails}</li>
                 <li>[!] VECTOR STORE: SUSPENDED</li>
               </ul>
             </div>
